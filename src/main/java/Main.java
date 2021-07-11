@@ -1,42 +1,65 @@
 import com.google.gson.Gson;
+import okhttp3.*;
 
 import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+import java.io.IOException;
 
 public class Main {
-    public static void main(String[] args) {
-        String json = "{\n" +
-                "\"hole\": [\n" +
-                "[55, 80], [65, 95], [95, 95], [35, 5], [5, 5],\n" +
-                "[35, 50], [5, 95], [35, 95], [45, 80]\n" +
-                "],\n" +
-                "\"figure\": {\n" +
-                "\"edges\": [\n" +
-                "[2, 5], [5, 4], [4, 1], [1, 0], [0, 8], [8, 3], [3, 7],\n" +
-                "[7, 11], [11, 13], [13, 12], [12, 18], [18, 19], [19, 14],\n" +
-                "[14, 15], [15, 17], [17, 16], [16, 10], [10, 6], [6, 2],\n" +
-                "[8, 12], [7, 9], [9, 3], [8, 9], [9, 12], [13, 9], [9, 11],\n" +
-                "[4, 8], [12, 14], [5, 10], [10, 15]\n" +
-                "],\n" +
-                "\"vertices\": [\n" +
-                "[20, 30], [20, 40], [30, 95], [40, 15], [40, 35], [40, 65],\n" +
-                "[40, 95], [45, 5], [45, 25], [50, 15], [50, 70], [55, 5],\n" +
-                "[55, 25], [60, 15], [60, 35], [60, 65], [60, 95], [70, 95],\n" +
-                "[80, 30], [80, 40]\n" +
-                "]\n" +
-                "},\n" +
-                "\"epsilon\": 150000\n" +
-                "}";
+    public static void main(String[] args) throws IOException {
+        int id = 51;
+        String json = getProblem(id);
         Gson gson = new Gson();
         Problem problem = gson.fromJson(json, Problem.class);
 
-
-        JFrame frame = new JFrame("nameOf");
-        frame.setSize(200,200);
+        JFrame frame = new JFrame("Window");
+        frame.setLayout(new BorderLayout());
+        frame.setSize(700, 700);
         frame.setVisible(true);
-//        Canvas canvas = new MyCanvas();
-        frame.add(new DrawIO(problem));
-//        frame.add(canvas);
-//        frame.setVisible(true);
-//        System.out.println(problem.toString());
+        DrawIO drawIO = new DrawIO(problem);
+        frame.add(drawIO);
+        JButton b = new JButton("push me");
+        b.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    System.out.println(setProblem(gson.toJson(drawIO.solution), id));
+                } catch (IOException ioException) {
+                    ioException.printStackTrace();
+                }
+            }
+        });
+        b.setBounds(20, 40, 10, 20);
+        frame.add(b, BorderLayout.SOUTH);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+    }
+
+    public static String getProblem(int id) throws IOException {
+        OkHttpClient client = new OkHttpClient();
+        Request request = new Request.Builder()
+                .url("https://poses.live/api/problems/" + id)
+                .addHeader("Authorization", "Bearer d73be585-fe48-41ef-895c-6674e7951d06")
+                .build();
+        try (Response response = client.newCall(request).execute()) {
+            return response.body().string();
+        }
+    }
+
+    public static String  setProblem(String json, int id) throws IOException {
+        MediaType JSON = MediaType.get("application/json; charset=utf-8");
+        OkHttpClient client = new OkHttpClient();
+        RequestBody body = RequestBody.create(JSON, json);
+        Request request = new Request.Builder()
+                .url("https://poses.live/api/problems/" + id + "/solutions")
+                .addHeader("Authorization", "Bearer d73be585-fe48-41ef-895c-6674e7951d06")
+                .post(body)
+                .build();
+        try (Response response = client.newCall(request).execute()) {
+            return response.body().string();
+        }
     }
 }
